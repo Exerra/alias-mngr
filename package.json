@@ -4,11 +4,11 @@
   "type": "module",
   "types": "dist/index.d.ts",
   "main": "dist/alias-mngr.js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "CLI utility for managing shell aliases. Cross-platform, experimental Windows support.",
   "scripts": {
     "build": "bun build --target=node --minify ./src/index.ts --packages=external --outfile=dist/alias-mngr.js",
-    "build:bin": "bun build --target=node --minify ./src/index.ts --outfile=/Volumes/KingstonSSD/alias-manager/alias-mngr.js",
+    "build:bin": "bun build --target=node --minify ./src/index.ts --outfile=dist/alias-mngr.js",
     "cmd": "bun link"
   },
   "bin": {

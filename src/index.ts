@@ -12,7 +12,7 @@ import { listAliasesCMD } from "./commands/listaliases";
 import { enableAliasCMD } from "./commands/enablealias";
 import { disableAliasCMD } from "./commands/disablealias";
 
-const version = "0.0.1"
+const version = "0.0.2"
 
 intro(`${chalk.bold.green("alias-mngr")} ${chalk.gray("(v" + version + ")")} by ${chalk.bold("Exerra")}`)
 

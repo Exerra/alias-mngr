@@ -31,7 +31,7 @@ export const linkAliases = (yarg: Yarg) => {
 
         if (os == "darwin" || os == "linux") {
             const home = homedir() || process.env.HOME || `/home/${process.env.USER}`
-            const shell = process.env.SHELL
+            const shell = process.env.SHELL as string
 
             let aliasFileContent = ""
 
@@ -43,19 +43,12 @@ export const linkAliases = (yarg: Yarg) => {
 
             let rcInclude = "source " + join(configFolder, "aliases.sh")
 
-            let rc = ".bashrc"
+            let rc = ""
             let supported = true
 
-            switch (shell) {
-                case "/bin/bash":
-                    rc = ".bashrc"
-                    break;
-                case "/bin/zsh":
-                    rc = ".zshrc"
-                    break;
-                default:
-                    supported = false
-            }
+            if (shell.includes("bash")) rc = ".bashrc"
+            else if (shell.includes("zsh")) rc = ".zshrc"
+            else supported = false
 
             if (!supported) return log.error("Shell not supported yet. Add this manually to your ~/.<shell>rc file:\n\n" + rcInclude)
 
