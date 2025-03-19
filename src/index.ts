@@ -14,7 +14,7 @@ import { disableAliasCMD } from "./commands/disablealias";
 
 const version = "0.0.1"
 
-intro(`${chalk.bold.green("alias-manager")} ${chalk.gray("(v" + version + ")")} by ${chalk.bold("Exerra")}`)
+intro(`${chalk.bold.green("alias-mngr")} ${chalk.gray("(v" + version + ")")} by ${chalk.bold("Exerra")}`)
 
 let yarg = yargs(hideBin(process.argv))
 
@@ -26,7 +26,7 @@ listAliasesCMD(yarg)
 enableAliasCMD(yarg)
 disableAliasCMD(yarg)
 
-yarg.scriptName("alias-manager")
+yarg.scriptName("alias-mngr")
 yarg.example('$0 add v "open \\$1 -a \\"Visual Studio Code\\""', "")
 yarg.help("h")
 yarg.alias("h", "help")//.alias("h", "")

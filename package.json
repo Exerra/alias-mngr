@@ -1,18 +1,18 @@
 {
-  "name": "@exerra/alias-manager",
+  "name": "alias-mngr",
   "module": "src/index.ts",
   "type": "module",
   "types": "dist/index.d.ts",
-  "main": "dist/index.js",
+  "main": "dist/alias-mngr.js",
   "version": "0.0.1",
-  "description": "alias-manager",
+  "description": "CLI utility for managing shell aliases. Cross-platform, experimental Windows support.",
   "scripts": {
-    "build": "bun build --target=node ./src/index.ts --packages=external --outfile=dist/index.js",
-    "build:bin": "bun build --target=node ./src/index.ts --outfile=/Volumes/KingstonSSD/alias-manager/index.js",
+    "build": "bun build --target=node --minify ./src/index.ts --packages=external --outfile=dist/alias-mngr.js",
+    "build:bin": "bun build --target=node --minify ./src/index.ts --outfile=/Volumes/KingstonSSD/alias-manager/alias-mngr.js",
     "cmd": "bun link"
   },
   "bin": {
-    "alias-manager": "./src/index.ts"
+    "alias-mngr": "./src/index.ts"
   },
   "dependencies": {
     "@clack/core": "^0.4.1",
