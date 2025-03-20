@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // ! need to figure out how to change this to node for the export
 
 import yargs from "yargs"
