@@ -4,7 +4,7 @@
   "type": "module",
   "types": "dist/index.d.ts",
   "main": "dist/alias-mngr.js",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "CLI utility for managing shell aliases. Cross-platform, experimental Windows support.",
   "scripts": {
     "build": "bun build --target=node --minify ./src/index.ts --packages=external --outfile=dist/alias-mngr.js",

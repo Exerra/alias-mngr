@@ -5,6 +5,7 @@ import fs from "node:fs"
 import { existsSync, mkdirSync } from "node:fs"
 import { Aliases } from "../types/aliases"
 import { confirm, log, text } from "@clack/prompts"
+import chalk from "chalk"
 
 export const addAliasCMD = (yarg) => {
     yarg.command("add [name] [command]", "Add a new alias", (yargs) => {
@@ -40,7 +41,7 @@ export const addAliasCMD = (yarg) => {
         }
 
         const confirmed = await confirm({
-            message: `Looks good? Name: ${name}, command: ${command}`
+            message: `Looks good? Name: ${chalk.gray(name)}, command: ${chalk.gray(command)}`
         })
 
         if (!confirmed) return log.error("Aborting!")
@@ -56,6 +57,6 @@ export const addAliasCMD = (yarg) => {
 
         fs.writeFileSync(join(configFolder, "aliases.json"), JSON.stringify(aliases))
 
-        return log.success("Added alias! It is enabled by default.")
+        return log.success(`Added alias! It is enabled by default. Run the following command to activate it - ${chalk.grey("alias-mngr link")}.`)
     })
 }
