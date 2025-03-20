@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // ! need to figure out how to change this to node for the export
 
 import yargs from "yargs"
@@ -12,11 +12,17 @@ import { listAliasesCMD } from "./commands/listaliases";
 import { enableAliasCMD } from "./commands/enablealias";
 import { disableAliasCMD } from "./commands/disablealias";
 
-const version = "0.0.2"
+const version = "0.0.3"
 
 intro(`${chalk.bold.green("alias-mngr")} ${chalk.gray("(v" + version + ")")} by ${chalk.bold("Exerra")}`)
 
 let yarg = yargs(hideBin(process.argv))
+
+// if (yarg.argv["_"].length == 0) {
+//     yarg.showHelp()
+// }
+
+yarg.demandCommand()
 
 addAliasCMD(yarg)
 removeAliasCMD(yarg)
