@@ -1,13 +1,13 @@
 import { join } from "node:path"
 import { Yarg } from "../types/yarg"
-import { getConfigFolder } from "../util/config"
+import { ensureConfigFolder } from "../util/config"
 import fs from "node:fs"
-import { existsSync, mkdirSync } from "node:fs"
+import { existsSync } from "node:fs"
 import { Aliases } from "../types/aliases"
 import { confirm, log, text } from "@clack/prompts"
 import chalk from "chalk"
 
-export const addAliasCMD = (yarg) => {
+export const addAliasCMD = (yarg: Yarg) => {
     yarg.command("add [name] [command]", "Add a new alias", (yargs) => {
         return yargs
             .positional("name", {
@@ -17,26 +17,33 @@ export const addAliasCMD = (yarg) => {
                 describe: "Command that the alias will run"
             })
     }, async (argv) => {
-        let { name, command } = argv
-        const configFolder = getConfigFolder()
+        let { name, command } = argv as { name: string, command: string }
         
-        if (!configFolder) return log.error("Invalid OS.")
+        let configFolder: string
+        try {
+            configFolder = ensureConfigFolder()
+        } catch (error) {
+            return log.error(`Failed to setup config folder: ${error}`)
+        }
 
-        if (!existsSync(configFolder)) mkdirSync(configFolder)
+        const aliasesFile = join(configFolder, "aliases.json")
+        if (!existsSync(aliasesFile)) {
+            fs.writeFileSync(aliasesFile, JSON.stringify([]))
+        }
 
-        if (!existsSync(join(configFolder, "aliases.json"))) fs.writeFileSync(join(configFolder, "aliases.json"), JSON.stringify([]))
-
-        const aliases = JSON.parse(fs.readFileSync(join(configFolder, "aliases.json"), "utf-8")) as Aliases
+        const aliases = JSON.parse(fs.readFileSync(aliasesFile, "utf-8")) as Aliases
 
         for (let alias of aliases) {
-            if (alias.name == name) return log.error("Alias with the same name already exists! Aborting...")
+            if (alias.name === name) {
+                return log.error("Alias with the same name already exists! Aborting...")
+            }
         }
 
         // example: alias-mngr add py python3.11 testing.py
         // Without this, command would just be python3.11
         // This combines everything after alias-mngr add
         if (argv["_"].length > 1) {
-            let joined = argv["_"].filter(arg => arg != "add").join(" ")
+            const joined = argv["_"].filter(arg => arg !== "add").join(" ")
             command = command + " " + joined
         }
 
@@ -45,8 +52,8 @@ export const addAliasCMD = (yarg) => {
         })
 
         if (!confirmed) return log.error("Aborting!")
-        if (typeof confirmed == "symbol") {
-            if (confirmed.description == "clack:cancel") return log.error("Aborting!")
+        if (typeof confirmed === "symbol") {
+            if (confirmed.description === "clack:cancel") return log.error("Aborting!")
         }
 
         aliases.push({
@@ -55,7 +62,7 @@ export const addAliasCMD = (yarg) => {
             enabled: true
         })
 
-        fs.writeFileSync(join(configFolder, "aliases.json"), JSON.stringify(aliases))
+        fs.writeFileSync(aliasesFile, JSON.stringify(aliases))
 
         return log.success(`Added alias! It is enabled by default. Run the following command to activate it - ${chalk.grey("alias-mngr link")}.`)
     })
