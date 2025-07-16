@@ -13,8 +13,12 @@ export const detectShell = async (): Promise<string> => {
     
     if (os === "win32") {
         // On Windows, check if we're running in PowerShell
-        if (process.env.PSModulePath) {
+        if (process.env.PSModulePath || process.env.POWERSHELL_TELEMETRY_OPTOUT !== undefined) {
             return "powershell"
+        }
+        // Check if we're running in Windows Terminal or Command Prompt
+        if (process.env.WT_SESSION) {
+            return "powershell" // Windows Terminal usually uses PowerShell
         }
         // Default to PowerShell on Windows
         return "powershell"
@@ -26,17 +30,23 @@ export const detectShell = async (): Promise<string> => {
         if (shell.includes("bash")) return "bash"
         if (shell.includes("zsh")) return "zsh"
         if (shell.includes("fish")) return "fish"
+        if (shell.includes("csh")) return "csh"
+        if (shell.includes("tcsh")) return "tcsh"
+        if (shell.includes("ksh")) return "ksh"
     }
     
     // Fallback: try to detect from parent process
     try {
-        const { stdout } = await exec("ps -p $$ -o comm=")
+        const { stdout } = await exec("ps -p $$ -o comm= 2>/dev/null || echo unknown")
         const shell = stdout.trim()
         if (shell.includes("bash")) return "bash"
         if (shell.includes("zsh")) return "zsh"
         if (shell.includes("fish")) return "fish"
+        if (shell.includes("csh")) return "csh"
+        if (shell.includes("tcsh")) return "tcsh"
+        if (shell.includes("ksh")) return "ksh"
     } catch {
-        // If detection fails, return unknown
+        // If detection fails, continue to return unknown
     }
     
     return "unknown"
@@ -75,7 +85,27 @@ export const getRcFilePath = (shell: string, homedir: string): string => {
             return `${homedir}/.zshrc`
         case "fish":
             return `${homedir}/.config/fish/config.fish`
+        case "csh":
+            return `${homedir}/.cshrc`
+        case "tcsh":
+            return `${homedir}/.tcshrc`
+        case "ksh":
+            return `${homedir}/.kshrc`
         default:
             throw new Error(`Unsupported shell: ${shell}`)
+    }
+}
+
+/**
+ * Ensures the parent directory of a file exists
+ * @param filePath The file path
+ */
+export const ensureParentDir = (filePath: string): void => {
+    const { dirname } = require("node:path")
+    const { existsSync, mkdirSync } = require("node:fs")
+    
+    const parentDir = dirname(filePath)
+    if (!existsSync(parentDir)) {
+        mkdirSync(parentDir, { recursive: true })
     }
 }

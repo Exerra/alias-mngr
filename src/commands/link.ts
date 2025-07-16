@@ -6,7 +6,7 @@ import { homedir, platform } from "node:os"
 import { promisify } from "node:util"
 import { join } from "node:path"
 import { ensureConfigFolder } from "../util/config"
-import { detectShell, findPowerShellExecutable, getRcFilePath } from "../util/shell"
+import { detectShell, findPowerShellExecutable, getRcFilePath, ensureParentDir } from "../util/shell"
 import { Aliases } from "../types/aliases"
 import { log } from "@clack/prompts"
 
@@ -50,12 +50,21 @@ export const linkAliases = (yarg: Yarg) => {
 
             let aliasFileContent = ""
             for (let { name, cmd } of aliases) {
-                aliasFileContent += `alias ${name}="${cmd.replaceAll("\"", "\\\"")}"\n`
+                if (shell === "fish") {
+                    // Fish shell uses different alias syntax
+                    aliasFileContent += `alias ${name} "${cmd.replaceAll("\"", "\\\"")}"\n`
+                } else {
+                    // Bash, zsh, and other POSIX shells
+                    aliasFileContent += `alias ${name}="${cmd.replaceAll("\"", "\\\"")}"\n`
+                }
             }
 
-            fs.writeFileSync(join(configFolder, "aliases.sh"), aliasFileContent)
+            const aliasFileName = shell === "fish" ? "aliases.fish" : "aliases.sh"
+            fs.writeFileSync(join(configFolder, aliasFileName), aliasFileContent)
 
-            const rcInclude = `source ${join(configFolder, "aliases.sh")}`
+            const rcInclude = shell === "fish" 
+                ? `source ${join(configFolder, aliasFileName)}`
+                : `source ${join(configFolder, aliasFileName)}`
             
             let rcPath: string
             try {
@@ -68,10 +77,7 @@ export const linkAliases = (yarg: Yarg) => {
             if (!existsSync(rcPath)) {
                 try {
                     // Create parent directories if needed
-                    const parentDir = join(rcPath, "..")
-                    if (!existsSync(parentDir)) {
-                        mkdirSync(parentDir, { recursive: true })
-                    }
+                    ensureParentDir(rcPath)
                     fs.writeFileSync(rcPath, "")
                 } catch (error) {
                     return log.error(`Failed to create RC file ${rcPath}: ${error}`)

@@ -1,5 +1,13 @@
 # alias-mngr
-CLI utility for managing shell aliases. Cross-platform, experimental Windows support.
+CLI utility for managing shell aliases. Cross-platform with full Windows support.
+
+## Features
+
+- **Cross-platform**: Works on Windows, macOS, and Linux
+- **Automatic shell detection**: Detects your shell and configures aliases accordingly
+- **Multiple shell support**: Bash, Zsh, Fish, PowerShell, Csh/Tcsh, Ksh
+- **Robust PowerShell support**: Works with both PowerShell 5.1 and PowerShell Core
+- **Safe configuration**: Creates config files in appropriate directories per platform
 
 ## Install
 I am working on publishing this on NPM. In the meantime you can grab a bundled JS file from the [Releases](https://github.com/Exerra/alias-manager/releases) section. When running it that way, substitute `alias-mngr` with `node alias-mngr.js`.
@@ -16,13 +24,17 @@ Example: `alias-mngr add v "open \$1 -a \"Visual Studio Code\""`
 
 ### Windows
 
-> [!CAUTION]
-> The following command is aimed for power users ONLY. If you don't know what you're doing, DO NOT run this. This weakens security for your computer.
+The tool now has full Windows support with automatic PowerShell detection. It will:
+- Detect whether you're using PowerShell 5.1 or PowerShell Core (pwsh)
+- Create the PowerShell profile directory if it doesn't exist
+- Handle profile paths correctly across different Windows versions
 
-By default Windows does not let users execute PowerShell scripts. To use this utility on Windows you have to run the following command:
-```sh
-Set-ExecutionPolicy Bypass
-```
+> [!NOTE]
+> If you encounter execution policy issues, you may need to run:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+> This is safer than using `Bypass` and only affects the current user.
 
 ## TODO
 - [ ] Support for more shells
@@ -31,8 +43,11 @@ Set-ExecutionPolicy Bypass
 
 | Shell                  | Supported? | Comment                                                                                                                                                               |
 | ---------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bash                   | ✅          |                                                                                                                                                                       |
-| Zsh                    | ✅          |                                                                                                                                                                       |
-| Fish                   | ❌          | Different way of handling from what I can tell. Don't use it myself, will have to experiment.                                                                         |
-| PowerShell             | Mostly     | If your PowerShell profile is configured to print something before a command is run, it won't work. Otherwise, should be fine if the Windows usage guide is followed. |
+| Bash                   | ✅          | Full support with automatic detection                                                                                                                                 |
+| Zsh                    | ✅          | Full support with automatic detection                                                                                                                                 |
+| Fish                   | ✅          | Full support with automatic detection and Fish-specific syntax                                                                                                        |
+| Csh/Tcsh               | ✅          | Basic support with automatic detection                                                                                                                                |
+| Ksh                    | ✅          | Basic support with automatic detection                                                                                                                                |
+| PowerShell             | ✅          | Full support with automatic detection. Works with both PowerShell 5.1 and PowerShell Core (pwsh)                                                                   |
+| Command Prompt         | ❌          | Not supported (use PowerShell instead)                                                                                                                               |
 | Anything not mentioned | ❌          | If you have a shell you wish to be supported, you can create an issue or code it yourself & make a PR :)                                                              |
