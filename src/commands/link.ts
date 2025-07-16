@@ -2,11 +2,11 @@ import { exec as execSync } from "node:child_process"
 import { Yarg } from "../types/yarg"
 import fs from "fs"
 import { existsSync, mkdirSync } from "node:fs"
-import { mkdir } from "node:fs/promises"
 import { homedir, platform } from "node:os"
 import { promisify } from "node:util"
 import { join } from "node:path"
-import { getConfigFolder } from "../util/config"
+import { ensureConfigFolder } from "../util/config"
+import { detectShell, findPowerShellExecutable, getRcFilePath } from "../util/shell"
 import { Aliases } from "../types/aliases"
 import { log } from "@clack/prompts"
 
@@ -16,94 +16,145 @@ export const linkAliases = (yarg: Yarg) => {
     yarg.command("link", "Links/binds aliases to the shell. Must be run after adding/removing aliases in order to use them.", async (argv) => {
         const os = platform()
 
-        const configFolder = getConfigFolder()
+        let configFolder: string
+        try {
+            configFolder = ensureConfigFolder()
+        } catch (error) {
+            return log.error(`Failed to setup config folder: ${error}`)
+        }
 
-        if (!configFolder) return log.error("Invalid OS.")
+        const aliasesFile = join(configFolder, "aliases.json")
+        if (!existsSync(aliasesFile)) {
+            fs.writeFileSync(aliasesFile, JSON.stringify([]))
+        }
 
-        if (!existsSync(configFolder)) mkdirSync(configFolder)
-
-        if (!existsSync(join(configFolder, "aliases.json"))) fs.writeFileSync(join(configFolder, "aliases.json"), JSON.stringify([]))
-
-        const aliasesPreFiltering = JSON.parse(fs.readFileSync(join(configFolder, "aliases.json"), "utf-8")) as Aliases
-        const aliases = aliasesPreFiltering.filter(alias => alias.enabled == true)
+        const aliasesPreFiltering = JSON.parse(fs.readFileSync(aliasesFile, "utf-8")) as Aliases
+        const aliases = aliasesPreFiltering.filter(alias => alias.enabled === true)
 
         log.step(`Loading ${aliases.length} aliases.`)
 
-        if (os == "darwin" || os == "linux") {
-            const home = homedir() || process.env.HOME || `/home/${process.env.USER}`
-            const shell = process.env.SHELL as string
+        if (os === "darwin" || os === "linux") {
+            const home = homedir() || process.env.HOME || `/home/${process.env.USER || process.env.USERNAME || "user"}`
+            
+            let shell: string
+            try {
+                shell = await detectShell()
+            } catch (error) {
+                return log.error(`Failed to detect shell: ${error}`)
+            }
+
+            if (shell === "unknown") {
+                return log.error("Unknown shell. Please add the following line to your shell's RC file manually:\n\n" + 
+                                `source ${join(configFolder, "aliases.sh")}`)
+            }
 
             let aliasFileContent = ""
-
             for (let { name, cmd } of aliases) {
                 aliasFileContent += `alias ${name}="${cmd.replaceAll("\"", "\\\"")}"\n`
             }
 
             fs.writeFileSync(join(configFolder, "aliases.sh"), aliasFileContent)
 
-            let rcInclude = "source " + join(configFolder, "aliases.sh")
+            const rcInclude = `source ${join(configFolder, "aliases.sh")}`
+            
+            let rcPath: string
+            try {
+                rcPath = getRcFilePath(shell, home)
+            } catch (error) {
+                return log.error(`Unsupported shell: ${shell}. Add this manually to your shell's RC file:\n\n${rcInclude}`)
+            }
 
-            let rc = ""
-            let supported = true
+            // Check if RC file exists, create if it doesn't
+            if (!existsSync(rcPath)) {
+                try {
+                    // Create parent directories if needed
+                    const parentDir = join(rcPath, "..")
+                    if (!existsSync(parentDir)) {
+                        mkdirSync(parentDir, { recursive: true })
+                    }
+                    fs.writeFileSync(rcPath, "")
+                } catch (error) {
+                    return log.error(`Failed to create RC file ${rcPath}: ${error}`)
+                }
+            }
 
-            if (shell.includes("bash")) rc = ".bashrc"
-            else if (shell.includes("zsh")) rc = ".zshrc"
-            else supported = false
+            let rcContent = fs.readFileSync(rcPath, "utf-8")
 
-            if (!supported) return log.error("Shell not supported yet. Add this manually to your ~/.<shell>rc file:\n\n" + rcInclude)
+            if (rcContent.includes(rcInclude)) {
+                return log.success("Done! Restart your shell for the changes to take effect!")
+            }
 
-            let rcContent = fs.readFileSync(join(home, rc), "utf-8")
-
-            if (rcContent.includes(rcInclude)) return log.success("Done! Restart your shell for the changes to take effect!")
-
-            rcContent += "\n\n" + rcInclude + "\n"
-
-            fs.writeFileSync(join(home, rc), rcContent)
+            rcContent += `\n\n${rcInclude}\n`
+            fs.writeFileSync(rcPath, rcContent)
 
             return log.success("Done! Restart your shell for the changes to take effect!")
         }
 
-        if (os == "win32") {
-            const user = homedir() || process.env["USERPROFILE"]
+        if (os === "win32") {
+            const user = homedir() || process.env.USERPROFILE || process.env.HOME
+
+            if (!user) {
+                return log.error("Unable to determine user home directory")
+            }
 
             let aliasFileContent = ""
-
             for (let { name, cmd } of aliases) {
                 aliasFileContent += `function ${name} { ${cmd} }\n`
             }
 
             fs.writeFileSync(join(configFolder, "aliases.ps1"), aliasFileContent)
 
+            // Find PowerShell executable
+            let powershellCmd: string
+            try {
+                powershellCmd = await findPowerShellExecutable()
+            } catch (error) {
+                return log.error("PowerShell not found. Please install PowerShell to use this tool on Windows.")
+            }
+
             // PowerShell profile is the same as .<shell>rc
-            // If anything is set to execute and print in the profile, this cannot grab the path. Need to fix.
-            let { stdout: profilePath, stderr } = await exec(`powershell.exe -Command "$PROFILE"`)
+            let profilePath: string
+            try {
+                const { stdout, stderr } = await exec(`${powershellCmd} -Command "$PROFILE"`)
+                
+                if (stderr) {
+                    throw new Error(stderr)
+                }
+                
+                profilePath = stdout.replace(/\r?\n/g, "").trim()
+            } catch (error) {
+                return log.error(`Failed to get PowerShell profile path: ${error}`)
+            }
 
-            profilePath = profilePath.replace("\r", "").replace("\n", "")
-
-            let profilePathCheck = profilePath.replace(user!, "")
-            let profilePathArr = profilePathCheck.split("\\")
-
-            let previousPath = user
-
-            for (let dir of profilePathArr) {
-                if (dir == "") continue
-                if (dir.replace("\r", "").replace("\n", "").endsWith(".ps1")) continue
-
-                if (!existsSync(join(previousPath!, dir))) mkdirSync(join(previousPath!, dir))
-
-                previousPath = join(previousPath!, dir)
+            // Create profile directory structure if it doesn't exist
+            const profileDir = join(profilePath, "..")
+            if (!existsSync(profileDir)) {
+                try {
+                    mkdirSync(profileDir, { recursive: true })
+                } catch (error) {
+                    return log.error(`Failed to create profile directory: ${error}`)
+                }
             }
 
             const profileExists = existsSync(profilePath)
             let profile = ""
 
-            if (profileExists) profile = fs.readFileSync(profilePath, "utf-8")
+            if (profileExists) {
+                profile = fs.readFileSync(profilePath, "utf-8")
+            }
 
-            profile += `\n\n. ${join(configFolder, "aliases.ps1")}\n`
+            const includeStatement = `. ${join(configFolder, "aliases.ps1")}`
+            
+            if (profile.includes(includeStatement)) {
+                return log.success("Done! Restart your shell for the changes to take effect!")
+            }
 
+            profile += `\n\n${includeStatement}\n`
             fs.writeFileSync(profilePath, profile)
 
             return log.success("Done! Restart your shell for the changes to take effect!")
         }
+        
+        return log.error("Unsupported operating system")
     })
 }

@@ -1,18 +1,18 @@
 {
   "name": "alias-mngr",
   "module": "src/index.ts",
-  "type": "module",
   "types": "dist/index.d.ts",
-  "main": "dist/alias-mngr.js",
+  "main": "dist/index.js",
   "version": "0.0.4",
   "description": "CLI utility for managing shell aliases. Cross-platform, experimental Windows support.",
   "scripts": {
-    "build": "bun build --target=node --minify ./src/index.ts --packages=external --outfile=dist/alias-mngr.js",
+    "build": "tsc",
+    "build:bun": "bun build --target=node --minify ./src/index.ts --packages=external --outfile=dist/alias-mngr.js",
     "build:bin": "bun build --target=node --minify ./src/index.ts --outfile=dist/alias-mngr-bundled.js",
     "cmd": "bun link"
   },
   "bin": {
-    "alias-mngr": "./src/index.ts"
+    "alias-mngr": "./dist/index.js"
   },
   "dependencies": {
     "@clack/core": "^0.4.1",
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/cli-table": "^0.3.4",
     "@types/yargs": "^17.0.33",
-    "bun-types": "^1.2.5"
+    "bun-types": "^1.2.5",
+    "typescript": "^5.8.3"
   }
 }
